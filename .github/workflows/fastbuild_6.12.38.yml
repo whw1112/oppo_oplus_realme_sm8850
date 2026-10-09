@@ -1,7 +1,7 @@
 name: 6.12.38 欧加真OKI内核快速构建
 
 env:
-  KSU_VERSION: '35200'
+  KSU_VERSION: '35220'
   DEVICE: 'PLZ110'
   TZ: Asia/Shanghai
   ANDROID_VERSION: 'android16'
@@ -17,9 +17,9 @@ on:
         description: 'KernelSU分支(BakaSU/SukiSU Ultra/KernelSU Next/KSU(原版)/无内置KSU,默认BakaSU)'
         required: true
         type: choice
-        default: 'bakasu'
+        default: 'resukisu'
         options:
-          - 'bakasu'
+          - 'resukisu'
           - 'sukisu'
           - 'ksunext'
           - 'ksu'
