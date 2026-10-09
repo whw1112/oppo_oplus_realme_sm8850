@@ -1,6 +1,8 @@
 name: 6.12.38 欧加真OKI内核快速构建
 
 env:
+、
+  DEVICE: 'PLZ110'
   TZ: Asia/Shanghai
   ANDROID_VERSION: 'android16'
   KERNEL_VERSION: '6.12'
