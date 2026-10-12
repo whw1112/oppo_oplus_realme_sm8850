@@ -5,7 +5,7 @@ env:
   ANDROID_VERSION: 'android16'
   KERNEL_VERSION: '6.12'
   SUB_VERSION: '69_gki'
-  KERNEL_NAME: 'android16-5-ga8f88ad96df3-ab13929693-4k'
+  KERNEL_NAME: 'android16-6-g242e1a07f878-ab15865446-4k'
   CCACHE_KEY: ccache-ecsv4-gki-6.12.69
 
 on:
@@ -258,7 +258,7 @@ jobs:
           if [[ ${{ github.event.inputs.ksu_type }} == "sukisu" || ${{ github.event.inputs.ksu_type }} == "bakasu" ]]; then
             echo "正在配置BakaSU（由于SukiSU长期未维护无法正常编译，且BakaSU兼容sukisu管理器，故SukiSU源码仓库已重定向为bakasu）..."
             curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/refs/heads/main/kernel/setup.sh" | bash -s main
-            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@cctv18"' >> ./common/arch/arm64/configs/gki_defconfig
+            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
             # 生成自定义版本号（基于提交计数）, 失败时使用 114514
             KSU_VERSION=$(expr $(git rev-list --count main) + 30700 2>/dev/null || echo 114514)
@@ -349,7 +349,7 @@ jobs:
           echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_ENABLE_LOG=n" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./common/arch/arm64/configs/gki_defconfig
@@ -716,6 +716,9 @@ jobs:
           git clone https://github.com/cctv18/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
           cd AnyKernel3
+          # 隐藏 anykernel.sh 中的作者签名（避免 Recovery 刷入日志泄漏第三方内核身份）
+          sed -i 's|kernel.string=.*|kernel.string=AnyKernel3|' anykernel.sh
+          sed -i '/ui_print "内核构建者/d' anykernel.sh
           cp ../common/out/arch/arm64/boot/Image ./Image
           if [[ ! -f ./Image ]]; then
             echo "未找到内核镜像文件，构建可能出错"
@@ -746,35 +749,8 @@ jobs:
           zip -r ../$AK3_NAME ./*
           echo "ak3name=$AK3_NAME" >> $GITHUB_OUTPUT
           
-          #为AK3添加注释（调试信息）
-          CLEAN_SUB_VERSION="${{ env.SUB_VERSION }}"
-          CLEAN_SUB_VERSION="${CLEAN_SUB_VERSION%_mtk}"
-          if [[ -n "${{ github.event.inputs.kernel_suffix }}" ]]; then
-            FULL_VERSION=${{ env.KERNEL_VERSION }}.${CLEAN_SUB_VERSION}-${{ github.event.inputs.kernel_suffix }}
-          else
-            FULL_VERSION=${{ env.KERNEL_VERSION }}.${CLEAN_SUB_VERSION}-${{ env.KERNEL_NAME }}
-          fi
-          TIME_NOW="$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')"
-          echo "Author: $GITHUB_ACTOR" > ./ak3.log
-          echo "Repo: $GITHUB_REPOSITORY" >> ./ak3.log
-          echo "Branch: $GITHUB_REF_NAME" >> ./ak3.log
-          echo "Run ID: $GITHUB_RUN_ID" >> ./ak3.log
-          echo "Commit: $GITHUB_SHA" >> ./ak3.log
-          echo "Time: $TIME_NOW" >> ./ak3.log
-          echo "Kernel Ver: $FULL_VERSION" >> ./ak3.log
-          echo "KSU Branch: ${KSU_TYPENAME}" >> ./ak3.log
-          echo "KSU Ver: ${KSUVER}" >> ./ak3.log
-          echo "susfs: ${{ github.event.inputs.susfs_enable }}" >> ./ak3.log
-          echo "KPM: ${{ github.event.inputs.kpm_enable }}" >> ./ak3.log
-          echo "LZ4: ${{ github.event.inputs.lz4_enable }}" >> ./ak3.log
-          echo "LZ4KD: ${{ github.event.inputs.lz4kd_enable }}" >> ./ak3.log
-          echo "IPset: ${{ github.event.inputs.better_net }}" >> ./ak3.log
-          echo "BBR&Brutal: ${{ github.event.inputs.bbr_enable }}" >> ./ak3.log
-          echo "Droidspaces: ${{ github.event.inputs.droidspaces_enable }}" >> ./ak3.log
-          echo "ADIOS: ${{ github.event.inputs.adios_enable }}" >> ./ak3.log
-          echo "Re-Kernel: ${{ github.event.inputs.rekernel_enable }}" >> ./ak3.log
-          echo "BBG: ${{ github.event.inputs.baseband_guard }}" >> ./ak3.log
-          zip -z ../$AK3_NAME < ./ak3.log
+          #为AK3添加中性注释（不泄漏CI身份/仓库信息）
+          echo "AnyKernel3 package" | zip -z ../$AK3_NAME
 
       - name: 上传 Ccache 调试日志
         if: always() && inputs.ccache_debug
